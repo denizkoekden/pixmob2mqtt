@@ -1,0 +1,55 @@
+{
+  "default_gap_s": 0.10,
+  "steps": [
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "RED", "duration_s": 2.5, "rate_hz": 3.0},
+        {"code": "RED_3", "duration_s": 2.5, "rate_hz": 3.0},
+        {"code": "DIM_RED", "duration_s": 2.5, "rate_hz": 3.0}
+      ]
+    },
+    {"action": "pause", "seconds": 0.8},
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "GRN_6", "duration_s": 2.0, "rate_hz": 3.0},
+        {"code": "LIGHT_GRN", "duration_s": 2.0, "rate_hz": 3.0},
+        {"code": "YELGRN_2", "duration_s": 2.0, "rate_hz": 3.0}
+      ]
+    },
+    {"action": "pause", "seconds": 0.8},
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "BLUE_3", "duration_s": 2.0, "rate_hz": 3.0},
+        {"code": "LIGHT_BLUE_2", "duration_s": 2.0, "rate_hz": 3.0},
+        {"code": "MAG_4", "duration_s": 2.0, "rate_hz": 3.0}
+      ]
+    },
+    {"action": "pause", "seconds": 0.8},
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "YEL_8", "duration_s": 2.0, "rate_hz": 3.0},
+        {"code": "PINK_4", "duration_s": 2.0, "rate_hz": 3.0},
+        {"code": "OR_3", "duration_s": 2.0, "rate_hz": 3.0}
+      ]
+    },
+    {"action": "pause", "seconds": 0.8},
+    {
+      "action": "random",
+      "pool": [
+        "REDOR_2",
+        "YELOR_1",
+        "WHITISH_LONG",
+        "WHITISH_5",
+        "TURQ_3",
+        "GRN_10",
+        "LIGHT_BLUE_3"
+      ],
+      "total_s": 12.0,
+      "rate_hz": 4.0
+    }
+  ]
+}

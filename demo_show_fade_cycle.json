@@ -1,0 +1,58 @@
+{
+  "default_gap_s": 0.08,
+  "steps": [
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "RED_FD_1", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "RED_FD_2", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "RED_FD_3", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "RED_FD_4", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "RED_FD_5", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "RED_FD_6", "duration_s": 0.8, "rate_hz": 4.0}
+      ]
+    },
+    {"action": "pause", "seconds": 0.6},
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "BLUE_FD_1", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "BLUE_FD_2", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "BLUE_FD_3", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "BLUE_FD_4", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "BLUE_FD_5", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "BLUE_FD_6", "duration_s": 0.8, "rate_hz": 4.0}
+      ]
+    },
+    {"action": "pause", "seconds": 0.6},
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "TURQ_FD_1", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "TURQ_FD_2", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "TURQ_FD_3", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "TURQ_FD_4", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "TURQ_FD_5", "duration_s": 0.8, "rate_hz": 4.0},
+        {"code": "TURQ_FD_6", "duration_s": 0.8, "rate_hz": 4.0}
+      ]
+    },
+    {"action": "pause", "seconds": 0.6},
+    {
+      "action": "random",
+      "pool": [
+        "RED_FD_3",
+        "GRN_FD_3",
+        "BLUE_FD_3",
+        "MAG_FD_3",
+        "YEL_FD_3",
+        "PINK_FD_3",
+        "OR_FD_3",
+        "WHITISH_FD_3",
+        "TURQ_FD_3",
+        "YELGRN_FD_3"
+      ],
+      "total_s": 10.0,
+      "rate_hz": 4.5
+    }
+  ]
+}

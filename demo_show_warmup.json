@@ -1,0 +1,28 @@
+{
+  "default_gap_s": 0.12,
+  "steps": [
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "RED", "duration_s": 3.0, "rate_hz": 2.5},
+        {"code": "YEL", "duration_s": 3.0, "rate_hz": 2.5},
+        {"code": "GRN", "duration_s": 3.0, "rate_hz": 2.5},
+        {"code": "BLUE", "duration_s": 3.0, "rate_hz": 2.5}
+      ]
+    },
+    {"action": "pause", "seconds": 1.0},
+    {
+      "action": "random",
+      "pool": ["TURQ", "MAG", "PINK", "OR", "WHITISH", "YELGRN"],
+      "total_s": 12.0,
+      "rate_hz": 3.5
+    },
+    {"action": "pause", "seconds": 1.0},
+    {
+      "action": "sequence",
+      "sequence": [
+        {"code": "WHITISH", "duration_s": 4.0, "rate_hz": 6.0}
+      ]
+    }
+  ]
+}
