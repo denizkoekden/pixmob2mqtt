@@ -11,6 +11,9 @@ Usage examples:
 
   # With MQTT auth
   python3 pixmob2mqtt.py all.ir 192.168.178.25 TURQ_3 --topic tasmota_771F55 --user mqtt --password secret
+
+  # Beat-reactive mic mode (Ctrl+C to stop)
+  python3 pixmob2mqtt.py all.ir 192.168.178.25 --topic tasmota_771F55 --mic --mic-code TURQ
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -26,6 +30,13 @@ try:
 except ImportError:
     print("Missing dependency: paho-mqtt\nInstall with: pip install paho-mqtt", file=sys.stderr)
     sys.exit(2)
+
+try:
+    import numpy as np
+    import sounddevice as sd
+except ImportError:
+    np = None
+    sd = None
 
 
 @dataclass
@@ -157,12 +168,107 @@ def mqtt_publish(
     if info.rc != mqtt.MQTT_ERR_SUCCESS:
         raise RuntimeError(f"MQTT publish failed rc={info.rc}")
 
+def _resolve_input_device(device_spec: Optional[str]) -> Optional[int]:
+    if device_spec is None:
+        return None
+    try:
+        return int(device_spec)
+    except ValueError:
+        pass
+
+    if sd is None:
+        raise RuntimeError("sounddevice not available")
+
+    device_spec_lower = device_spec.lower()
+    for i, dev in enumerate(sd.query_devices()):
+        if dev.get("max_input_channels", 0) > 0 and device_spec_lower in dev["name"].lower():
+            return i
+    raise ValueError(f"No input device matching '{device_spec}'.")
+
+def run_mic_mode(
+    codes: Dict[str, IRCode],
+    broker: str,
+    port: int,
+    topic: str,
+    code_name: str,
+    user: Optional[str],
+    password: Optional[str],
+    client_id: str,
+    qos: int,
+    retain: bool,
+    dry_run: bool,
+    device_spec: Optional[str],
+    samplerate: int,
+    blocksize: int,
+    threshold_ratio: float,
+    floor: float,
+    min_interval_s: float,
+):
+    if sd is None or np is None:
+        raise RuntimeError("Mic mode requires sounddevice and numpy. Install with: pip install sounddevice numpy")
+
+    if code_name not in codes:
+        raise KeyError(f"Code '{code_name}' not found in .ir file")
+
+    payload = tasmota_payload(codes[code_name])
+    device = _resolve_input_device(device_spec)
+    ema = None
+    last_trigger = 0.0
+
+    if dry_run:
+        client = None
+    else:
+        client = mqtt.Client(client_id=client_id, clean_session=True)
+        if user is not None:
+            client.username_pw_set(user, password=password)
+        rc = client.connect(broker, port, keepalive=30)
+        if rc != 0:
+            raise RuntimeError(f"MQTT connect failed rc={rc}")
+        client.loop_start()
+
+    print("Mic mode active. Press Ctrl+C to stop.")
+
+    try:
+        with sd.InputStream(
+            device=device,
+            channels=1,
+            samplerate=samplerate,
+            blocksize=blocksize,
+            dtype="float32",
+        ) as stream:
+            while True:
+                data, overflowed = stream.read(blocksize)
+                if overflowed:
+                    continue
+
+                rms = float(np.sqrt(np.mean(np.square(data))))
+                if ema is None:
+                    ema = rms
+                else:
+                    ema = (ema * 0.9) + (rms * 0.1)
+
+                now = time.perf_counter()
+                trigger_level = max(ema * threshold_ratio, floor)
+                if rms >= trigger_level and (now - last_trigger) >= min_interval_s:
+                    last_trigger = now
+                    if dry_run:
+                        print(f"[MIC] BEAT rms={rms:.4f} ema={ema:.4f}")
+                    else:
+                        info = client.publish(topic, payload=payload, qos=qos, retain=retain)
+                        info.wait_for_publish(timeout=5)
+                        if info.rc != mqtt.MQTT_ERR_SUCCESS:
+                            raise RuntimeError(f"MQTT publish failed rc={info.rc}")
+    finally:
+        if not dry_run and client is not None:
+            client.loop_stop()
+            client.disconnect()
+
 
 def main():
     ap = argparse.ArgumentParser(description="Send PixMob .ir codes to Tasmota via MQTT")
     ap.add_argument("irfile", nargs="?", help="Path to .ir file")
     ap.add_argument("broker", nargs="?", help="MQTT broker hostname/IP (NOT the Tasmota device IP unless it is the broker)")
-    ap.add_argument("code", nargs="?", help="Code name to send (e.g., TURQ_3)")
+    ap.add_argument("code", nargs="?", help="Code name to send (e.g., TURQ_3). In --mic mode, this overrides --mic-code.")
     ap.add_argument("--topic", help="Tasmota topic (e.g., tasmota_771F55). Publishes to cmnd/<topic>/IRSend")
     ap.add_argument("--port", type=int, default=1883, help="MQTT port (default 1883)")
     ap.add_argument("--user", help="MQTT username")
@@ -171,6 +277,15 @@ def main():
     ap.add_argument("--qos", type=int, default=0, choices=[0, 1, 2], help="MQTT QoS")
     ap.add_argument("--retain", action="store_true", help="Publish retained message")
     ap.add_argument("--list", action="store_true", help="List available code names in the file and exit")
+    ap.add_argument("--mic", action="store_true", help="Beat-reactive mic mode")
+    ap.add_argument("--mic-code", default="WHITISH", help="Code name to send on each beat")
+    ap.add_argument("--mic-device", help="Input device index or substring match")
+    ap.add_argument("--mic-samplerate", type=int, default=44100)
+    ap.add_argument("--mic-block", type=int, default=1024, help="Audio block size")
+    ap.add_argument("--mic-threshold", type=float, default=1.8, help="Trigger ratio vs rolling RMS")
+    ap.add_argument("--mic-floor", type=float, default=0.02, help="Minimum RMS to trigger")
+    ap.add_argument("--mic-min-interval", type=float, default=0.15, help="Minimum seconds between triggers")
+    ap.add_argument("--dry-run", action="store_true", help="Print beats, do not send MQTT (mic mode)")
 
     args = ap.parse_args()
 
@@ -185,11 +300,37 @@ def main():
             print(name)
         return 0
 
-    if not args.broker or not args.code:
-        ap.error("broker and code are required unless --list is used")
+    if not args.broker:
+        ap.error("broker is required unless --list is used")
 
     if not args.topic:
         ap.error("--topic is required (example: --topic tasmota_771F55)")
+
+    if args.mic:
+        code_name = args.code or args.mic_code
+        run_mic_mode(
+            codes=codes,
+            broker=args.broker,
+            port=args.port,
+            topic=f"cmnd/{args.topic}/IRSend",
+            code_name=code_name,
+            user=args.user,
+            password=args.password,
+            client_id=args.client_id,
+            qos=args.qos,
+            retain=args.retain,
+            dry_run=args.dry_run,
+            device_spec=args.mic_device,
+            samplerate=args.mic_samplerate,
+            blocksize=args.mic_block,
+            threshold_ratio=args.mic_threshold,
+            floor=args.mic_floor,
+            min_interval_s=args.mic_min_interval,
+        )
+        return 0
+
+    if not args.code:
+        ap.error("code is required unless --list or --mic is used")
 
     if args.code not in codes:
         close = [n for n in codes.keys() if n.lower() == args.code.lower()]

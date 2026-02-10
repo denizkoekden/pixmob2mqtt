@@ -9,6 +9,7 @@ Includes a simple show player that can sequence, randomize, and pause IR cues ba
 - Python 3.8+
 - MQTT broker reachable from your machine and your Tasmota device
 - Tasmota IR capable device (IRSend enabled)
+- Optional for mic mode: `sounddevice` and `numpy` (PortAudio)
 
 ## Install
 
@@ -40,6 +41,20 @@ Using the full color set:
 
 ```bash
 python3 pixmob2mqtt.py pixmob_all_colors.ir 192.168.1.10 TURQ_3 --topic tasmota_771F55
+```
+
+### Mic Mode
+
+Beat-reactive blinking from the host microphone:
+
+```bash
+python3 pixmob2mqtt.py PixMob_main.ir 192.168.1.10 --topic tasmota_771F55 --mic
+```
+
+Pick a different code or adjust sensitivity:
+
+```bash
+python3 pixmob2mqtt.py PixMob_main.ir 192.168.1.10 --topic tasmota_771F55 --mic --mic-code TURQ --mic-threshold 1.5 --mic-min-interval 0.2
 ```
 
 ## Show Player
@@ -122,6 +137,7 @@ The payload is formatted as Tasmota raw: `<frequency_khz>,<pulse_us>,<pulse_us>,
 - The `broker` argument is the MQTT broker hostname/IP (not the Tasmota device IP unless it is also your broker).
 - Ensure your Tasmota topic matches the device topic (e.g., `tasmota_771F55`).
 - Successfully tested with Pixmob X4 Gen 3.1 bands and an S06 IR controller running Tasmota.
+- Mic mode uses `sounddevice` (PortAudio). You may need to install PortAudio on your system.
 
 ## Credits
 
